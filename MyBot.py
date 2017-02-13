@@ -3,7 +3,6 @@ from hlt import NORTH, EAST, SOUTH, WEST, STILL, Site, opposite_cardinal
 myID, game_map = hlt.get_init()
 turn_number, moves, val_cache, my_pieces, combat_sites, known_strengths, max_prod, perimeter, perim_values, total_str, total_prod, furthest_site = 1, {}, [[0 for x in range(game_map.width)] for y in range(game_map.height)], set(), [], [], max([s.production for s in game_map]), [], [], 0, 0, 0
 hlt.send_init("PythBot#"+str(myID))
-dbg = open('debug.log', 'w')
 current_milli_time = lambda: int(round(time.time() * 1000))
 def dyn_max_val(s, mst_cache, children):
     my_val = pow(mst_cache[s.y][s.x][2],1.5)/mst_cache[s.y][s.x][0]
@@ -79,29 +78,17 @@ while True:
         new_border = set()
         for site in border:
             new_border.update([n for n in game_map.neighbors(site) if n.owner == myID and dists[n] == 101])
-        dbg.write('new border: '+str(len(new_border))+'\n')
-        dbg.write('accrued strength: '+str(accrued_strength)+'\n')
         border = new_border
         dc += 1
-        dbg.write('dc: '+str(dc)+'\n')
-    dbg.write('total str: '+str(total_str)+'\n')
-    dbg.write('accr str: '+str(accrued_strength)+'\n')
-    dbg.write('dc: '+str(dc)+'\n')
-    dbg.write('dists: '+str(len([s for s in dists if dists[s] != 101]))+'\n')
-    dbg.write('my_pieces: '+str(len(my_pieces))+'\n')
     if len(combat_sites) > 0:
-        dbg.write('Should be routing sites!\n')
         for site in sorted([s for s in my_pieces if s not in moves and s.strength > 5*s.production and dists[s] != 101], key = lambda s: dists[s]):
-            dbg.write('Got to a piece that should be routed!\n')
             if dists[site] == 1:
-                dbg.write('Actually routed a border site!\n')
                 make_move(site, sorted([(d, n) for d, n in enumerate(game_map.neighbors(site)) if dists[n] == 0], key = lambda p: game_map.get_e_distance(furthest_site, p[1]))[-1][0])
             else:
                 best_dir, best_val = STILL, 0
                 for dir, neighbor in ((d, n) for d, n in enumerate(game_map.neighbors(site)) if dists[n] != 101 and dists[site] > dists[n]):
                     new_val = 255 - (site.strength + known_strengths[neighbor.y][neighbor.x])
                     if new_val >= best_val: best_dir, best_val = dir, new_val
-                if best_dir != STILL: dbg.write('Actually routed an internal site!')
                 make_move(site, best_dir)
     new_perim = sorted(perimeter, key=get_val)
     while len(new_perim) > 0:
@@ -137,4 +124,3 @@ while True:
         if known_strengths[best_neighbor.y][best_neighbor.x] + s.strength <= 290: make_move(s, best_card)
         else: make_move(s, STILL)
     send_moves(moves)
-    dbg.flush()
